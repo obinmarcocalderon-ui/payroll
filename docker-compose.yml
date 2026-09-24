@@ -1,0 +1,255 @@
+# Full-stack local development: Postgres + Redis + Laravel API + React frontend.
+# Expects this file to sit next to both the `backend/` and
+# `payroll-benefits-system/` folders (i.e. run `docker compose up --build`
+# from this same directory).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: payroll_benefits
+      POSTGRES_USER: payroll_user
+      POSTGRES_PASSWORD: payroll_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payroll_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@payroll-benefits.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: payroll_benefits
+      DB_USERNAME: payroll_user
+      DB_PASSWORD: payroll_pass
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SESSION_DRIVER: redis
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      FRONTEND_URL: http://localhost:4173
+      SANCTUM_STATEFUL_DOMAINS: "localhost:4173,127.0.0.1:4173"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
+
+  employee-service:
+    build:
+      context: ./employee-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      EMPLOYEE_DB_HOST: postgres
+      EMPLOYEE_DB_PORT: "5432"
+      EMPLOYEE_DB_DATABASE: employee_db
+      EMPLOYEE_DB_USERNAME: payroll_user
+      EMPLOYEE_DB_PASSWORD: payroll_pass
+      INTERNAL_API_KEY: "${INTERNAL_API_KEY}"
+    ports:
+      - "8001:8001"
+
+  auth-service:
+    build:
+      context: ./auth-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AUTH_DB_HOST: postgres
+      AUTH_DB_PORT: "5432"
+      AUTH_DB_DATABASE: auth_db
+      AUTH_DB_USERNAME: payroll_user
+      AUTH_DB_PASSWORD: payroll_pass
+      INTERNAL_API_KEY: "${INTERNAL_API_KEY}"
+    ports:
+      - "8002:8002"
+
+  payroll-service:
+    build:
+      context: ./payroll-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PAYROLL_DB_HOST: postgres
+      PAYROLL_DB_PORT: "5432"
+      PAYROLL_DB_DATABASE: payroll_db
+      PAYROLL_DB_USERNAME: payroll_user
+      PAYROLL_DB_PASSWORD: payroll_pass
+      INTERNAL_API_KEY: "${INTERNAL_API_KEY}"
+    ports:
+      - "8003:8003"
+
+  attendance-service:
+    build:
+      context: ./attendance-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ATTENDANCE_DB_HOST: postgres
+      ATTENDANCE_DB_PORT: "5432"
+      ATTENDANCE_DB_DATABASE: attendance_db
+      ATTENDANCE_DB_USERNAME: payroll_user
+      ATTENDANCE_DB_PASSWORD: payroll_pass
+      INTERNAL_API_KEY: "${INTERNAL_API_KEY}"
+    ports:
+      - "8004:8004"
+
+  compensation-service:
+    build:
+      context: ./compensation-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      COMPENSATION_DB_HOST: postgres
+      COMPENSATION_DB_PORT: "5432"
+      COMPENSATION_DB_DATABASE: compensation_db
+      COMPENSATION_DB_USERNAME: payroll_user
+      COMPENSATION_DB_PASSWORD: payroll_pass
+      INTERNAL_API_KEY: "${INTERNAL_API_KEY}"
+    ports:
+      - "8005:8005"
+
+  claims-service:
+    build:
+      context: ./claims-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      CLAIMS_DB_HOST: postgres
+      CLAIMS_DB_PORT: "5432"
+      CLAIMS_DB_DATABASE: claims_db
+      CLAIMS_DB_USERNAME: payroll_user
+      CLAIMS_DB_PASSWORD: payroll_pass
+      INTERNAL_API_KEY: "${INTERNAL_API_KEY}"
+    ports:
+      - "8006:8006"
+
+  benefits-service:
+    build:
+      context: ./benefits-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      BENEFITS_DB_HOST: postgres
+      BENEFITS_DB_PORT: "5432"
+      BENEFITS_DB_DATABASE: benefits_db
+      BENEFITS_DB_USERNAME: payroll_user
+      BENEFITS_DB_PASSWORD: payroll_pass
+      INTERNAL_API_KEY: "${INTERNAL_API_KEY}"
+    ports:
+      - "8007:8007"
+
+  scheduler:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: payroll_benefits
+      DB_USERNAME: payroll_user
+      DB_PASSWORD: payroll_pass
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SESSION_DRIVER: redis
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      FRONTEND_URL: http://localhost:4173
+      SANCTUM_STATEFUL_DOMAINS: "localhost:4173,127.0.0.1:4173"
+    volumes:
+      - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
+    command: php artisan schedule:work
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000/api
+    ports:
+      - "4173:5173"
+    volumes:
+      - ./payroll-benefits-system:/app
+      - frontend_node_modules:/app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:
+  backend_vendor:
+  frontend_node_modules:

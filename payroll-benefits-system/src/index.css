@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Manrope", "Inter", sans-serif;
+  --font-sans: "Inter", sans-serif;
+
+  --color-navy-950: #0a1330;
+  --color-navy-900: #0f1a3d;
+  --color-navy-800: #16234f;
+  --color-navy-700: #202f63;
+  --color-navy-100: #e7eaf3;
+
+  --color-clay-600: #b8623f;
+  --color-clay-500: #c97b5a;
+  --color-clay-100: #f4e2d8;
+
+  --color-teal-700: #1f4759;
+  --color-teal-500: #2f6b82;
+  --color-teal-100: #dcebee;
+
+  --color-primary-700: #1e40af;
+  --color-primary-600: #2f5fdb;
+  --color-primary-500: #3b6bef;
+  --color-primary-100: #e3ebfd;
+
+  --color-purple-600: #7c5cf5;
+  --color-purple-100: #ece7fd;
+
+  --color-sand-50: #f6f7fb;
+  --color-sand-100: #eef0f6;
+
+  --color-surface: #ffffff;
+  --color-line: #e7eaf3;
+
+  --color-ink-900: #16203a;
+  --color-ink-500: #6b7590;
+  --color-ink-300: #a4abbd;
+
+  --color-good-600: #1e7a4c;
+  --color-good-100: #dcf3e6;
+  --color-warn-600: #b3781a;
+  --color-warn-100: #fbecd4;
+  --color-bad-600: #c03a3a;
+  --color-bad-100: #fbe1e1;
+}
+
+/*
+ * Dark theme — overrides the same semantic tokens used above, so every
+ * `bg-sand-50`, `bg-surface`, `border-line`, `text-ink-*` utility repaints
+ * automatically. Toggled by adding data-theme="dark" to <html> (see
+ * hooks/useTheme.tsx). `navy-100` is intentionally NOT overridden here —
+ * besides borders it also doubles as a light text tint on fixed-dark
+ * panels (Sidebar, Login's brand panel) and a pastel badge fill, so it
+ * stays constant; `line` is the themed token for borders/dividers.
+ * Brand colors (navy sidebar, primary, status chips, literal white) are
+ * intentionally left as-is in both themes too.
+ */
+:root[data-theme='dark'] {
+  --color-sand-50: #0b1220;
+  --color-sand-100: #131c2f;
+
+  --color-surface: #121a2c;
+  --color-line: #232f4d;
+
+  --color-ink-900: #eef1f8;
+  --color-ink-500: #9aa3bd;
+  --color-ink-300: #6b7590;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-sand-50);
+  color: var(--color-ink-900);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-ink-300);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-teal-500);
+  outline-offset: 2px;
+}

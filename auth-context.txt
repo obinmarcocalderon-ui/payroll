@@ -1,0 +1,213 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password');
+            $table->string('role')->default('hr_administrator');
+            $table->rememberToken();
+            $table->timestamps();
+        });
+
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('sessions', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->foreignId('user_id')->nullable()->index();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->longText('payload');
+            $table->integer('last_activity')->index();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('sessions');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('users');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('employees', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->string('employee_number')->unique();
+            $table->string('first_name');
+            $table->string('last_name');
+            $table->string('email')->unique();
+            $table->string('department');
+            $table->string('position');
+            $table->string('employment_status')->default('active'); // active, on_leave, suspended, separated
+            $table->date('date_hired');
+            $table->decimal('base_salary', 12, 2)->default(0);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('employees');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->foreignUuid('employee_id')->nullable()->after('role')
+                ->constrained('employees')->nullOnDelete();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropForeign(['employee_id']);
+            $table->dropColumn('employee_id');
+        });
+    }
+};
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+
+class User extends Authenticatable
+{
+    use HasApiTokens, Notifiable;
+       public const ROLE_ADMIN = 'admin';
+       public const ROLE_HR_STAFF = 'hr_staff';
+       public const ROLE_EMPLOYEE = 'employee';
+
+    public const ROLES = [
+        self::ROLE_ADMIN,
+        self::ROLE_HR_STAFF,
+        self::ROLE_EMPLOYEE,
+    ];
+
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'role',
+        'employee_id',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
+
+public function employee(): BelongsTo
+{
+    return $this->belongsTo(Employee::class);
+}
+    public function isAdmin(): bool
+    {
+        return $this->role === self::ROLE_ADMIN;
+    }
+
+public function isHrStaff(): bool
+{
+    return $this->role === self::ROLE_HR_STAFF;
+}
+
+public function isEmployee(): bool
+{
+    return $this->role === self::ROLE_EMPLOYEE;
+}
+
+public function hasRole(string ...$roles): bool
+{
+    return in_array($this->role, $roles, true);
+}
+}
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Employee extends Model
+{
+    use HasUuids, SoftDeletes;
+        protected $connection = 'employee';
+
+
+    protected $fillable = [
+        'employee_number', 'first_name', 'last_name', 'email', 'phone', 'address',
+        'department', 'position', 'employment_status', 'employment_type', 'civil_status', 'date_hired',
+        'base_salary', 'loan_deduction_per_cutoff',
+        'transportation_allowance', 'rice_subsidy_allowance',
+        'sss_loan_per_cutoff', 'hdmf_loan_per_cutoff',
+        'shift_start', 'shift_end',
+        'sss_number', 'philhealth_number', 'pagibig_number', 'tin_number',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'date_hired' => 'date',
+            'base_salary' => 'decimal:2',
+            'loan_deduction_per_cutoff' => 'decimal:2',
+            'transportation_allowance' => 'decimal:2',
+            'rice_subsidy_allowance' => 'decimal:2',
+            'sss_loan_per_cutoff' => 'decimal:2',
+            'hdmf_loan_per_cutoff' => 'decimal:2',
+        ];
+    }
+
+    public function payslips(): HasMany
+    {
+        return $this->hasMany(Payslip::class);
+    }
+
+    public function attendanceRecords(): HasMany
+    {
+        return $this->hasMany(AttendanceRecord::class);
+    }
+}
